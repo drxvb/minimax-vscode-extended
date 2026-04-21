@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
-
-const API_KEY_SECRET_KEY = "minimax-vscode.apiKey";
+import { API_KEY_SECRET_KEY } from "../utils/constants";
 
 export class MiniMaxAuthentication {
   constructor(private readonly secrets: vscode.SecretStorage) {}

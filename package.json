@@ -2,7 +2,7 @@
   "name": "minimax-vscode-extended",
   "displayName": "MiniMax AI Extended",
   "description": "Community fork of the MiniMax AI VSCode provider with the full Token Plan model lineup: M2, M2.1, M2.5, M2.5-highspeed, M2.7, M2.7-highspeed. Supports tool calling and reasoning; vision capability declared for UI parity (note: MiniMax M2.x treats attached images as text-only context).",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "publisher": "xikey",
   "license": "MIT",
   "icon": "icon/icon.png",
@@ -105,6 +105,7 @@
     "test": "node ./out/test/runTest.js"
   },
   "dependencies": {
+    "gpt-tokenizer": "^2.9.0",
     "openai": "^6.5.0"
   },
   "devDependencies": {

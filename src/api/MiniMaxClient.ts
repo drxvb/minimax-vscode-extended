@@ -6,6 +6,7 @@ import type {
   ChatCompletionMessageParam,
 } from "openai/resources/chat/completions/completions";
 import { MiniMaxMessage, MiniMaxToolDefinition } from "./types";
+import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, MINIMAX_BASE_URL } from "../utils/constants";
 
 export interface ChatOptions {
   temperature?: number;
@@ -14,6 +15,16 @@ export interface ChatOptions {
   tools?: MiniMaxToolDefinition[];
   toolChoice?: "auto" | "required";
   reasoningSplit?: boolean;
+}
+
+interface MiniMaxExtraBody {
+  reasoning_split?: boolean;
+}
+
+interface MiniMaxChatCompletionParams extends ChatCompletionCreateParamsStreaming {
+  tools?: MiniMaxToolDefinition[];
+  tool_choice?: "auto" | "required";
+  extra_body?: MiniMaxExtraBody;
 }
 
 export class MiniMaxError extends Error {
@@ -28,7 +39,7 @@ export class MiniMaxError extends Error {
 }
 
 export class MiniMaxClient {
-  private readonly baseUrl = "https://api.minimax.io/v1";
+  private readonly baseUrl = MINIMAX_BASE_URL;
 
   async *streamChat(
     model: string,
@@ -42,42 +53,31 @@ export class MiniMaxClient {
     }
 
     const abortController = new AbortController();
-    const cancellationDisposable = cancellationToken?.onCancellationRequested(() =>
-      abortController.abort(),
-    );
-
+    let cancellationDisposable: vscode.Disposable | undefined;
     try {
+      cancellationDisposable = cancellationToken?.onCancellationRequested(() =>
+        abortController.abort(),
+      );
+
       const client = new OpenAI({
         apiKey,
         baseURL: this.baseUrl,
       });
 
-      const params: ChatCompletionCreateParamsStreaming = {
+      const params: MiniMaxChatCompletionParams = {
         model,
         stream: true,
         messages: this.toOpenAiMessages(messages),
-        temperature: options?.temperature ?? 1,
-        max_tokens: options?.maxTokens ?? 8192,
+        temperature: options?.temperature ?? DEFAULT_TEMPERATURE,
+        max_tokens: options?.maxTokens ?? DEFAULT_MAX_TOKENS,
+        extra_body: { reasoning_split: options?.reasoningSplit ?? true },
       };
       if (options?.tools && options.tools.length > 0) {
-        (
-          params as ChatCompletionCreateParamsStreaming & {
-            tools?: MiniMaxToolDefinition[];
-          }
-        ).tools = options.tools;
+        params.tools = options.tools;
       }
       if (options?.toolChoice) {
-        (
-          params as ChatCompletionCreateParamsStreaming & {
-            tool_choice?: "auto" | "required";
-          }
-        ).tool_choice = options.toolChoice;
+        params.tool_choice = options.toolChoice;
       }
-      (
-        params as ChatCompletionCreateParamsStreaming & {
-          extra_body?: { reasoning_split?: boolean };
-        }
-      ).extra_body = { reasoning_split: options?.reasoningSplit ?? true };
 
       const stream = (await client.chat.completions.create(params, {
         signal: abortController.signal,
@@ -123,6 +123,10 @@ export class MiniMaxClient {
   }
 
   private toMiniMaxError(error: unknown): MiniMaxError {
+    if (error instanceof MiniMaxError) {
+      return error;
+    }
+
     if (error instanceof OpenAI.APIError) {
       const statusCode = error.status ?? 0;
       const code = statusCode === 401 ? "AUTHENTICATION_ERROR" : "API_ERROR";

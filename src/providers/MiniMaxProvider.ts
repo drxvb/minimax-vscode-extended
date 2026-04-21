@@ -3,6 +3,12 @@ import { MiniMaxClient, MiniMaxError } from "../api/MiniMaxClient";
 import { MiniMaxAuthentication } from "./MiniMaxAuthentication";
 import { TokenCounter } from "../utils/TokenCounter";
 import {
+  CONFIG_SECTION,
+  DEFAULT_MAX_TOKENS,
+  DEFAULT_TEMPERATURE,
+  VISIBLE_MODELS_KEY,
+} from "../utils/constants";
+import {
   MiniMaxAssistantMessage,
   MiniMaxMessage,
   MiniMaxReasoningDetail,
@@ -13,18 +19,9 @@ import {
   SUPPORTED_MODELS,
 } from "../api/types";
 
-interface ModelWithApiKey extends vscode.LanguageModelChatInformation {
-  __minimaxApiKey?: string;
-}
-
 type PrepareOptionsWithConfiguration = vscode.PrepareLanguageModelChatModelOptions & {
   configuration?: Record<string, unknown>;
 };
-
-const DEFAULT_TEMPERATURE = 1;
-const DEFAULT_MAX_TOKENS = 8192;
-const CONFIG_SECTION = "minimax";
-const VISIBLE_MODELS_KEY = "visibleModels";
 
 interface ReasoningUpdate {
   text: string;
@@ -45,9 +42,10 @@ interface AccumulatedToolCall {
   arguments: string;
 }
 
-export class MiniMaxProvider implements vscode.LanguageModelChatProvider {
+export class MiniMaxProvider implements vscode.LanguageModelChatProvider, vscode.Disposable {
   private readonly modelsChangedEmitter = new vscode.EventEmitter<void>();
   readonly onDidChangeLanguageModelChatInformation = this.modelsChangedEmitter.event;
+  private readonly apiKeyByModelId = new Map<string, string>();
 
   constructor(
     private readonly apiClient: MiniMaxClient,
@@ -57,6 +55,11 @@ export class MiniMaxProvider implements vscode.LanguageModelChatProvider {
 
   notifyModelsChanged(): void {
     this.modelsChangedEmitter.fire();
+  }
+
+  dispose(): void {
+    this.modelsChangedEmitter.dispose();
+    this.apiKeyByModelId.clear();
   }
 
   async provideLanguageModelChatInformation(
@@ -87,10 +90,10 @@ export class MiniMaxProvider implements vscode.LanguageModelChatProvider {
     progress: vscode.Progress<vscode.LanguageModelResponsePart>,
     token: vscode.CancellationToken,
   ): Promise<void> {
-    const modelApiKey = (model as ModelWithApiKey).__minimaxApiKey;
+    const storedKey = this.apiKeyByModelId.get(model.id);
     const apiKey =
-      modelApiKey && modelApiKey.trim().length > 0
-        ? modelApiKey
+      storedKey && storedKey.trim().length > 0
+        ? storedKey
         : await this.authManager.getOrPromptApiKey();
 
     if (!apiKey) {
@@ -199,13 +202,10 @@ export class MiniMaxProvider implements vscode.LanguageModelChatProvider {
       return Promise.resolve(this.tokenCounter.estimateTokens(text));
     }
 
-    let totalChars = 0;
-    for (const part of text.content) {
-      if (part instanceof vscode.LanguageModelTextPart) {
-        totalChars += part.value.length;
-      }
-    }
-    return Promise.resolve(this.tokenCounter.estimateTokens(String(totalChars)));
+    const combined = this.concatTextParts(
+      Array.isArray(text.content) ? text.content : [],
+    );
+    return Promise.resolve(this.tokenCounter.estimateTokens(combined));
   }
 
   private convertMessages(
@@ -434,20 +434,20 @@ export class MiniMaxProvider implements vscode.LanguageModelChatProvider {
 
   private modelsWithApiKey(apiKey: string): vscode.LanguageModelChatInformation[] {
     const visibleModels = this.getVisibleModels();
-    return visibleModels.map(
-      (model) =>
-        ({
-          id: model.id,
-          name: model.name,
-          detail: "Coding Plan",
-          family: model.id,
-          version: "1.0",
-          maxInputTokens: model.contextLength,
-          maxOutputTokens: model.contextLength,
-          capabilities: { toolCalling: true, imageInput: true },
-          __minimaxApiKey: apiKey,
-        }) as ModelWithApiKey,
-    );
+    this.apiKeyByModelId.clear();
+    return visibleModels.map((model) => {
+      this.apiKeyByModelId.set(model.id, apiKey);
+      return {
+        id: model.id,
+        name: model.name,
+        detail: "Token Plan",
+        family: model.id,
+        version: "1.0",
+        maxInputTokens: model.contextLength,
+        maxOutputTokens: model.contextLength,
+        capabilities: { toolCalling: true, imageInput: true },
+      } satisfies vscode.LanguageModelChatInformation;
+    });
   }
 
   private getVisibleModels() {
