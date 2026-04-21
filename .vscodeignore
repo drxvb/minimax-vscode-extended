@@ -10,3 +10,7 @@ package-lock.json
 .gitignore
 .git/**
 *.vsix
+*.zip
+tests/**
+playwright.config.ts
+test-results/**
