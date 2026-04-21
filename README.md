@@ -1,71 +1,61 @@
-# MiniMax AI VSCode Extension
+# MiniMax AI Extended — VSCode Extension
 
-A VSCode extension that integrates MiniMax Coding Plan models as a language model provider using the VSCode Language Model Chat Provider API.
+A community fork of [zelosleone/minimax-vscode](https://github.com/zelosleone/minimax-vscode) that adds the newer MiniMax Token Plan models (M2.5 High-Speed, M2.7, M2.7 High-Speed) to VS Code's Language Model Chat Provider API.
 
-## Features
+> **Attribution:** This is a fork. Core architecture, provider implementation, and authentication code were written by [zelosleone](https://github.com/zelosleone) and are used here under the original MIT license. See `LICENSE`.
 
-- **Coding Plan Models**: Uses MiniMax-M2.5, MiniMax-M2.1, or MiniMax-M2
-- **Global Endpoint**: Uses `https://api.minimax.io/v1`
-- **Interleaved tool reasoning** continuity with structured thinking blocks.
+## What this fork adds over upstream 1.0.2
 
-## Requirements
-
-- VSCode 1.109.0 or later
-- MiniMax API key (get one at [MiniMax Dashboard](https://platform.minimax.io/user-center/payment/coding-plan))
-
-### Thinking Blocks (Proposed API)
-
-When proposed API is enabled, structured thinking uses `LanguageModelThinkingPart`.
-Otherwise, the extension uses text-mode thinking blocks (`<think>...</think>`), while preserving full assistant responses for interleaved tool reasoning continuity.
-
-Optional (VS Code Insiders + proposed API):
-
-```bash
-code-insiders --enable-proposed-api denizhandaklr.minimax-vscode
-```
-
-
-## Installation
-
-1. Open VSCode
-2. Go to Extensions (Ctrl+Shift+X)
-3. Search for "MiniMax AI"
-4. Click Install
-
-### Setting Up Your API Key
-
-1. Get your API key from [MiniMax Dashboard](https://platform.minimax.io)
-2. Open Command Palette
-3. Run `MiniMax: Set API Key`
-4. Enter your API key when prompted
-
-### Model Visibility
-
-Set `minimax.visibleModels` in settings to control which MiniMax models appear in the model picker.
+- `MiniMax-M2.7` — current default model
+- `MiniMax-M2.7-highspeed` — 2× request quota, faster throughput
+- `MiniMax-M2.5-highspeed` — 2× request quota, faster throughput
+- Live-tested against `https://api.minimax.io/v1` — every model ID in the list responds successfully on a valid Token Plan account
 
 ## Supported Models
 
-| Model | Context Length |
-|-------|---------------|
-| MiniMax-M2.5 | 204.8K tokens |
-| MiniMax-M2.1 | 204.8K tokens |
-| MiniMax-M2 | 204.8K tokens |
+| Model ID | Context | Request Quota |
+|---|---|---|
+| `MiniMax-M2.7` | ~200K tokens | 1× per call |
+| `MiniMax-M2.7-highspeed` | ~200K tokens | 2× per call |
+| `MiniMax-M2.5` | ~200K tokens | 1× per call |
+| `MiniMax-M2.5-highspeed` | ~200K tokens | 2× per call |
+| `MiniMax-M2.1` | ~200K tokens | 1× per call |
+| `MiniMax-M2` | ~200K tokens | 1× per call |
 
-## Usage
+## Capabilities
 
-Once configured, you can use MiniMax AI with VSCode's built-in chat features:
+- **Tool calling**: yes (all models)
+- **Reasoning / thinking blocks**: yes (`<think>…</think>` in text mode, or `LanguageModelThinkingPart` under proposed API)
+- **Vision / image input**: **no** — MiniMax's M2.x family is text-only. Attached images are silently dropped by the API, so this extension does not declare vision capability.
 
-1. Open the Chat view (Ctrl+Shift+Y)
-2. Select "MiniMax AI" as the provider
-3. Start chatting!
+## Requirements
 
+- VS Code 1.109.0 or later
+- A MiniMax API key with Token Plan access. High-speed variants require a plan that includes them — get one at the [MiniMax Token Plan page](https://platform.minimax.io/subscribe/token-plan).
+
+## Setup
+
+1. Install the extension.
+2. Open the Command Palette → `MiniMax: Set API Key`.
+3. Paste your key (stored in VS Code's SecretStorage).
+4. Open the Chat view and pick a `MiniMax AI` model from the model picker.
+
+### Controlling which models appear
+
+Set `minimax.visibleModels` in settings. Default is all six.
+
+### Proposed thinking-part API (optional)
+
+```bash
+code-insiders --enable-proposed-api xikey.minimax-vscode-extended
+```
 
 ## Security
 
-- API keys are stored securely using VSCode's SecretStorage
-- No sensitive data is logged
-- All API calls use HTTPS
+- API key stored in VS Code SecretStorage
+- No sensitive data logged
+- All calls HTTPS to `https://api.minimax.io/v1`
 
 ## License
 
-MIT
+MIT — original copyright retained. See `LICENSE`.

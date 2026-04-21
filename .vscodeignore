@@ -6,3 +6,7 @@ tsconfig.json
 package-lock.json
 **/*.map
 **/*.ts
+.specstory/**
+.gitignore
+.git/**
+*.vsix

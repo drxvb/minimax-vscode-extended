@@ -1,15 +1,19 @@
 {
-  "name": "minimax-vscode",
-  "displayName": "MiniMax AI",
-  "description": "MiniMax AI language model provider for VSCode - Integrate MiniMax's AI coding capabilities into VSCode using the Language Model Chat Provider API",
-  "version": "1.0.2",
-  "publisher": "denizhandaklr",
+  "name": "minimax-vscode-extended",
+  "displayName": "MiniMax AI Extended",
+  "description": "Community fork of the MiniMax AI VSCode provider with the full Token Plan model lineup: M2, M2.1, M2.5, M2.5-highspeed, M2.7, M2.7-highspeed. Text + tool-calling only (MiniMax M2.x does not support image input).",
+  "version": "1.2.0",
+  "publisher": "xikey",
   "license": "MIT",
   "icon": "icon/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zelosleone/minimax-vscode"
+    "url": "https://github.com/drxvb/minimax-vscode-extended"
   },
+  "bugs": {
+    "url": "https://github.com/drxvb/minimax-vscode-extended/issues"
+  },
+  "homepage": "https://github.com/drxvb/minimax-vscode-extended#readme",
   "main": "./out/extension.js",
   "engines": {
     "vscode": "^1.109.0"
@@ -38,13 +42,19 @@
           "items": {
             "type": "string",
             "enum": [
+              "MiniMax-M2.7",
+              "MiniMax-M2.7-highspeed",
               "MiniMax-M2.5",
+              "MiniMax-M2.5-highspeed",
               "MiniMax-M2.1",
               "MiniMax-M2"
             ]
           },
           "default": [
+            "MiniMax-M2.7",
+            "MiniMax-M2.7-highspeed",
             "MiniMax-M2.5",
+            "MiniMax-M2.5-highspeed",
             "MiniMax-M2.1",
             "MiniMax-M2"
           ],

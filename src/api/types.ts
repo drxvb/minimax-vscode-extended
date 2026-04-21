@@ -56,7 +56,10 @@ export interface MiniMaxToolDefinition {
 }
 
 export const MODEL_IDS = [
+  "MiniMax-M2.7",
+  "MiniMax-M2.7-highspeed",
   "MiniMax-M2.5",
+  "MiniMax-M2.5-highspeed",
   "MiniMax-M2.1",
   "MiniMax-M2",
 ] as const;
@@ -69,10 +72,13 @@ export interface ModelInfo {
   contextLength: number;
 }
 
-export const DEFAULT_MODEL_ID: ModelId = "MiniMax-M2.5";
+export const DEFAULT_MODEL_ID: ModelId = "MiniMax-M2.7";
 
 export const SUPPORTED_MODELS: readonly ModelInfo[] = [
+  { id: "MiniMax-M2.7", name: "MiniMax M2.7", contextLength: 204800 },
+  { id: "MiniMax-M2.7-highspeed", name: "MiniMax M2.7 High-Speed", contextLength: 204800 },
   { id: "MiniMax-M2.5", name: "MiniMax M2.5", contextLength: 204800 },
+  { id: "MiniMax-M2.5-highspeed", name: "MiniMax M2.5 High-Speed", contextLength: 204800 },
   { id: "MiniMax-M2.1", name: "MiniMax M2.1", contextLength: 204800 },
   { id: "MiniMax-M2", name: "MiniMax M2", contextLength: 204800 },
 ];
