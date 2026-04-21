@@ -138,11 +138,15 @@ export class MiniMaxProvider implements vscode.LanguageModelChatProvider, vscode
 
     let reasoningBuffer = "";
     const thinkingPartCtor = this.getThinkingPartCtor();
-    const useReasoningSplit = Boolean(thinkingPartCtor);
     const pendingToolCalls = new Map<number, AccumulatedToolCall>();
     let toolCallsEmitted = false;
     const tools = this.convertTools(options.tools);
 
+    // Always request reasoning_split so MiniMax returns reasoning in
+    // `reasoning_details` and keeps `content` clean. Without this flag the
+    // server embeds "<think>…</think>" inline in content, which leaks
+    // literal tags into the chat UI on stable VS Code (where the proposed
+    // LanguageModelThinkingPart API is unavailable).
     const stream = client.streamChat(
       resolvedModel.id,
       this.convertMessages(messages),
@@ -152,7 +156,7 @@ export class MiniMaxProvider implements vscode.LanguageModelChatProvider, vscode
         apiKey,
         tools,
         toolChoice: this.resolveToolChoice(options, tools),
-        reasoningSplit: useReasoningSplit,
+        reasoningSplit: true,
       },
       token,
     );
@@ -528,15 +532,10 @@ export class MiniMaxProvider implements vscode.LanguageModelChatProvider, vscode
 
   private reportReasoning(
     progress: vscode.Progress<vscode.LanguageModelResponsePart>,
-    thinkingPartCtor: ThinkingPartCtor | undefined,
+    thinkingPartCtor: ThinkingPartCtor,
     text: string,
     reasoning: ReasoningUpdate,
   ): void {
-    if (!thinkingPartCtor) {
-      progress.report(new vscode.LanguageModelTextPart(`<think>${text}</think>`));
-      return;
-    }
-
     const thinkingPart = new thinkingPartCtor(text, reasoning.id, reasoning.metadata);
     (progress as vscode.Progress<vscode.LanguageModelResponsePart | unknown>).report(
       thinkingPart as vscode.LanguageModelResponsePart,
