@@ -46,18 +46,33 @@ export class MiniMaxProvider implements vscode.LanguageModelChatProvider, vscode
   private readonly modelsChangedEmitter = new vscode.EventEmitter<void>();
   readonly onDidChangeLanguageModelChatInformation = this.modelsChangedEmitter.event;
   private readonly apiKeyByModelId = new Map<string, string>();
+  private readonly subscriptions: vscode.Disposable[] = [];
 
   constructor(
     private readonly apiClient: MiniMaxClient,
     private readonly authManager: MiniMaxAuthentication,
     private readonly tokenCounter: TokenCounter,
-  ) {}
+  ) {
+    // Wipe the in-memory key cache whenever the VS Code window loses focus.
+    // provideLanguageModelChatResponse falls back to SecretStorage via the
+    // authManager, so the user sees no interruption on return.
+    this.subscriptions.push(
+      vscode.window.onDidChangeWindowState((state) => {
+        if (!state.focused) {
+          this.apiKeyByModelId.clear();
+        }
+      }),
+    );
+  }
 
   notifyModelsChanged(): void {
     this.modelsChangedEmitter.fire();
   }
 
   dispose(): void {
+    for (const sub of this.subscriptions.splice(0)) {
+      sub.dispose();
+    }
     this.modelsChangedEmitter.dispose();
     this.apiKeyByModelId.clear();
   }

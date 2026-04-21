@@ -1,12 +1,29 @@
 import * as vscode from "vscode";
 import OpenAI from "openai";
 import type {
+  ChatCompletionAssistantMessageParam,
   ChatCompletionChunk,
   ChatCompletionCreateParamsStreaming,
   ChatCompletionMessageParam,
+  ChatCompletionSystemMessageParam,
+  ChatCompletionToolMessageParam,
+  ChatCompletionUserMessageParam,
 } from "openai/resources/chat/completions/completions";
-import { MiniMaxMessage, MiniMaxToolDefinition } from "./types";
+import { MiniMaxMessage, MiniMaxReasoningDetail, MiniMaxToolDefinition } from "./types";
 import { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, MINIMAX_BASE_URL } from "../utils/constants";
+
+// MiniMax augments OpenAI's assistant message shape with `reasoning_details`
+// for interleaved tool-reasoning continuity. The field is MiniMax-specific
+// and not part of the official OpenAI schema, so we model it explicitly.
+type MiniMaxAssistantMessageParam = ChatCompletionAssistantMessageParam & {
+  reasoning_details?: MiniMaxReasoningDetail[];
+};
+
+type MiniMaxChatMessageParam =
+  | ChatCompletionSystemMessageParam
+  | ChatCompletionUserMessageParam
+  | MiniMaxAssistantMessageParam
+  | ChatCompletionToolMessageParam;
 
 export interface ChatOptions {
   temperature?: number;
@@ -97,28 +114,43 @@ export class MiniMaxClient {
   }
 
   private toOpenAiMessages(messages: MiniMaxMessage[]): ChatCompletionMessageParam[] {
-    return messages.map((message) => {
+    return messages.map<MiniMaxChatMessageParam>((message) => {
       if (message.role === "assistant") {
-        return {
+        const assistant: MiniMaxAssistantMessageParam = {
           role: "assistant",
           content: message.content,
-          tool_calls: message.tool_calls,
-          reasoning_details: message.reasoning_details,
-        } as unknown as ChatCompletionMessageParam;
+        };
+        if (message.tool_calls && message.tool_calls.length > 0) {
+          assistant.tool_calls = message.tool_calls;
+        }
+        if (message.reasoning_details && message.reasoning_details.length > 0) {
+          assistant.reasoning_details = message.reasoning_details;
+        }
+        return assistant;
       }
 
       if (message.role === "tool") {
-        return {
+        const tool: ChatCompletionToolMessageParam = {
           role: "tool",
           tool_call_id: message.tool_call_id,
           content: message.content,
-        } as unknown as ChatCompletionMessageParam;
+        };
+        return tool;
       }
 
-      return {
-        role: message.role,
+      if (message.role === "user") {
+        const user: ChatCompletionUserMessageParam = {
+          role: "user",
+          content: message.content,
+        };
+        return user;
+      }
+
+      const system: ChatCompletionSystemMessageParam = {
+        role: "system",
         content: message.content,
-      } as ChatCompletionMessageParam;
+      };
+      return system;
     });
   }
 
